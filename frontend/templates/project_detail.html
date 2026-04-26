@@ -1,0 +1,1408 @@
+{% extends "base.html" %}
+
+{% block title %}项目详情{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1" id="project-title">加载中...</h2>
+                <div id="project-meta" class="text-muted small"></div>
+            </div>
+            <div>
+                <a href="/projects" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-3 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-list-check me-2"></i>工作流程
+            </div>
+            <div class="card-body p-3">
+                <div id="workflow-steps"></div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>项目信息
+            </div>
+            <div class="card-body" id="project-info">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-9">
+        <ul class="nav nav-tabs mb-4" id="main-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#tab-workflow">
+                    <i class="bi bi-play-circle me-1"></i>工作流执行
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-documents">
+                    <i class="bi bi-file-text me-1"></i>过程文档
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-data">
+                    <i class="bi bi-table me-1"></i>数据查看
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-models">
+                    <i class="bi bi-bar-chart me-1"></i>模型结果
+                </a>
+            </li>
+        </ul>
+        
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="tab-workflow">
+                <div id="workflow-content">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-info-circle text-muted" style="font-size: 3rem;"></i>
+                            <p class="mt-3 text-muted">选择左侧工作流程步骤查看详情</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="tab-documents">
+                <div id="documents-list">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                            <p class="mt-3 text-muted">暂无文档</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="tab-data">
+                <div id="data-preview">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                            <p class="mt-3 text-muted">请先上传数据</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="tab-models">
+                <div id="models-results">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                            <p class="mt-3 text-muted">模型尚未训练</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="document-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="doc-modal-title">文档详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="doc-modal-content"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentProject = null;
+    const projectId = '{{ project_id }}';
+    
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadProject();
+    });
+    
+    async function loadProject() {
+        try {
+            const response = await apiRequest(`/projects/${projectId}`);
+            if (response.success) {
+                currentProject = response.data;
+                renderProject();
+            } else {
+                showToast(response.error || '加载项目失败', 'error');
+            }
+        } catch (error) {
+            showToast('加载项目失败', 'error');
+            console.error(error);
+        }
+    }
+    
+    function renderProject() {
+        if (!currentProject) return;
+        
+        document.getElementById('project-title').textContent = currentProject.name;
+        document.getElementById('project-meta').innerHTML = `
+            <span class="me-3">创建时间: ${formatDate(currentProject.created_at)}</span>
+            <span class="me-3">状态: ${getStatusBadge(currentProject.status)}</span>
+            ${currentProject.scenario?.detected ? 
+                `<span class="scenario-badge scenario-${currentProject.scenario.loan_phase}">
+                    ${currentProject.scenario.loan_phase_name} - ${currentProject.scenario.sub_scenario_name}
+                </span>` : ''}
+        `;
+        
+        renderWorkflowSteps();
+        renderProjectInfo();
+        renderDocuments();
+        renderDataPreview();
+        renderModelResults();
+    }
+    
+    function renderWorkflowSteps() {
+        const steps = currentProject.workflow_steps || [];
+        const container = document.getElementById('workflow-steps');
+        
+        let html = '';
+        steps.forEach((step, index) => {
+            const statusClass = step.status === 'completed' ? 'completed' : 
+                               (step.status === 'error' ? 'pending' : 'pending');
+            const isActive = index === currentProject.current_step;
+            
+            let icon = 'bi-circle';
+            let iconClass = 'text-muted';
+            
+            if (step.status === 'completed') {
+                icon = 'bi-check-circle-fill';
+                iconClass = 'text-success';
+            } else if (step.status === 'error') {
+                icon = 'bi-exclamation-circle-fill';
+                iconClass = 'text-danger';
+            } else if (isActive) {
+                icon = 'bi-play-circle-fill';
+                iconClass = 'text-primary';
+            }
+            
+            html += `
+                <div class="workflow-step ${statusClass} ${isActive ? 'active' : ''} mb-2 p-3 rounded" 
+                     onclick="selectStep(${index})" style="cursor: pointer;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi ${icon} ${iconClass} me-3" style="font-size: 1.25rem;"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">${step.name}</h6>
+                            <small class="text-muted">步骤 ${index + 1}</small>
+                        </div>
+                        ${step.status === 'completed' ? '<i class="bi bi-check text-success"></i>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    function renderProjectInfo() {
+        const container = document.getElementById('project-info');
+        
+        let html = '';
+        
+        html += `<h6 class="mb-3">数据信息</h6>`;
+        if (currentProject.data?.has_data) {
+            const dataInfo = currentProject.data?.data_info || {};
+            html += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">数据文件</small>
+                        <small class="text-truncate" style="max-width: 150px;" title="${currentProject.data.data_filename}">
+                            ${currentProject.data.data_filename}
+                        </small>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">样本数</small>
+                        <small>${dataInfo.rows || '-'}</small>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">特征数</small>
+                        <small>${dataInfo.columns || '-'}</small>
+                    </div>
+                </div>
+            `;
+        } else {
+            html += `<p class="text-muted small">暂无数据</p>`;
+        }
+        
+        html += `<hr>`;
+        html += `<h6 class="mb-3">代码信息</h6>`;
+        if (currentProject.code?.has_code) {
+            html += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">代码文件</small>
+                        <small class="text-truncate" style="max-width: 150px;" title="${currentProject.code.code_filename}">
+                            ${currentProject.code.code_filename}
+                        </small>
+                    </div>
+                </div>
+            `;
+        } else {
+            html += `<p class="text-muted small">暂无代码</p>`;
+        }
+        
+        html += `<hr>`;
+        html += `<h6 class="mb-3">操作</h6>`;
+        html += `
+            <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="refreshProject()">
+                <i class="bi bi-arrow-clockwise me-1"></i>刷新
+            </button>
+            <button class="btn btn-outline-secondary btn-sm w-100" onclick="exportProject()">
+                <i class="bi bi-download me-1"></i>导出项目
+            </button>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    function renderDocuments() {
+        const docs = currentProject.documents || [];
+        const container = document.getElementById('documents-list');
+        
+        if (docs.length === 0) {
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-3 text-muted">暂无文档，完成各步骤后将自动生成过程文档</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="row">';
+        docs.forEach(doc => {
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="document-item cursor-pointer" onclick="showDocument('${doc.id}')">
+                        <div class="d-flex">
+                            <i class="bi bi-file-earmark-text text-primary me-3" style="font-size: 2rem;"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">${doc.name}</h6>
+                                <small class="text-muted">生成时间: ${formatDate(doc.timestamp)}</small>
+                            </div>
+                            <i class="bi bi-arrow-right-circle text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+    }
+    
+    function renderDataPreview() {
+        const container = document.getElementById('data-preview');
+        
+        if (!currentProject.data?.has_data) {
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-3 text-muted">请先上传数据</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        const dataInfo = currentProject.data?.data_info || {};
+        const sampleData = dataInfo.sample_data || [];
+        
+        if (sampleData.length === 0) {
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-eye text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-3 text-muted">数据预览不可用</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        const columns = Object.keys(sampleData[0]);
+        
+        let tableHtml = `
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>数据预览 (前5行)</span>
+                    <span class="text-muted small">共 ${dataInfo.rows || '-'} 行，${dataInfo.columns || '-'} 列</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    ${columns.map(col => `<th>${col}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+        `;
+        
+        sampleData.forEach(row => {
+            tableHtml += '<tr>';
+            columns.forEach(col => {
+                tableHtml += `<td>${row[col] !== null && row[col] !== undefined ? row[col] : '-'}</td>`;
+            });
+            tableHtml += '</tr>';
+        });
+        
+        tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (dataInfo.column_info) {
+            tableHtml += `
+                <div class="card mt-4">
+                    <div class="card-header">字段信息</div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>字段名</th>
+                                        <th>数据类型</th>
+                                        <th>非空数</th>
+                                        <th>缺失数</th>
+                                        <th>缺失率</th>
+                                        <th>唯一值</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            dataInfo.column_info.forEach(col => {
+                tableHtml += `
+                    <tr>
+                        <td>${col.name}</td>
+                        <td><code>${col.dtype}</code></td>
+                        <td>${col.non_null_count}</td>
+                        <td>${col.missing_count}</td>
+                        <td>${col.missing_rate.toFixed(2)}%</td>
+                        <td>${col.unique_count}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = tableHtml;
+    }
+    
+    function renderModelResults() {
+        const container = document.getElementById('models-results');
+        const modelEval = currentProject.model_evaluation;
+        const modelTrain = currentProject.model_training;
+        
+        if (!modelEval && !modelTrain) {
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-3 text-muted">模型尚未训练</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        
+        if (modelEval && modelEval.metrics) {
+            const metrics = modelEval.metrics;
+            
+            html += `
+                <div class="card mb-4">
+                    <div class="card-header">模型评估指标</div>
+                    <div class="card-body">
+                        <div class="row">
+            `;
+            
+            const metricList = [
+                { key: 'auc', label: 'AUC', format: '.4f' },
+                { key: 'ks', label: 'KS', format: '.4f' },
+                { key: 'gini', label: 'Gini', format: '.4f' },
+                { key: 'accuracy', label: '准确率', format: '.4f' },
+                { key: 'precision', label: '精确率', format: '.4f' },
+                { key: 'recall', label: '召回率', format: '.4f' },
+                { key: 'f1', label: 'F1分数', format: '.4f' },
+                { key: 'specificity', label: '特异度', format: '.4f' }
+            ];
+            
+            metricList.forEach(m => {
+                if (metrics[m.key] !== undefined) {
+                    html += `
+                        <div class="col-xl-3 col-md-6 mb-3">
+                            <div class="metric-card">
+                                <div class="metric-value">${metrics[m.key].toFixed ? metrics[m.key].toFixed(4) : metrics[m.key]}</div>
+                                <div class="metric-label">${m.label}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (metrics.confusion_matrix) {
+                const cm = metrics.confusion_matrix;
+                html += `
+                    <div class="card mb-4">
+                        <div class="card-header">混淆矩阵</div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>预测为负</th>
+                                            <th>预测为正</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <th>实际为负</th>
+                                            <td class="bg-success text-white">TN: ${metrics.tn || cm[0][0]}</td>
+                                            <td class="bg-warning text-white">FP: ${metrics.fp || cm[0][1]}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>实际为正</th>
+                                            <td class="bg-danger text-white">FN: ${metrics.fn || cm[1][0]}</td>
+                                            <td class="bg-primary text-white">TP: ${metrics.tp || cm[1][1]}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        if (modelEval && modelEval.feature_importance) {
+            const fi = modelEval.feature_importance.slice(0, 15);
+            html += `
+                <div class="card">
+                    <div class="card-header">特征重要性 (Top 15)</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>排名</th>
+                                        <th>特征</th>
+                                        <th>重要性</th>
+                                        <th>重要性占比</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            const totalImportance = fi.reduce((sum, f) => sum + f.importance, 0);
+            
+            fi.forEach((feature, index) => {
+                const percentage = (feature.importance / totalImportance * 100).toFixed(2);
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><code>${feature.feature}</code></td>
+                        <td>${feature.importance.toFixed(6)}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                    <div class="progress-bar bg-primary" style="width: ${percentage}%;"></div>
+                                </div>
+                                <span class="small">${percentage}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+    }
+    
+    function selectStep(stepIndex) {
+        const contentContainer = document.getElementById('workflow-content');
+        const steps = currentProject.workflow_steps || [];
+        const step = steps[stepIndex];
+        
+        let content = '';
+        
+        switch(stepIndex) {
+            case 0:
+                content = renderStep0ProjectCreation();
+                break;
+            case 1:
+                content = renderStep1DataUpload();
+                break;
+            case 2:
+                content = renderStep2ScenarioDetection();
+                break;
+            case 3:
+                content = renderStep3DataPreparation();
+                break;
+            case 4:
+                content = renderStep4FeatureEngineering();
+                break;
+            case 5:
+                content = renderStep5ModelTraining();
+                break;
+            case 6:
+                content = renderStep6ModelEvaluation();
+                break;
+            case 7:
+                content = renderStep7ModelDeployment();
+                break;
+            default:
+                content = renderDefaultStep(step);
+        }
+        
+        contentContainer.innerHTML = content;
+    }
+    
+    function renderStep0ProjectCreation() {
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-info-circle me-2"></i>项目创建
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        项目已成功创建，当前信息：
+                    </div>
+                    <table class="table">
+                        <tr>
+                            <td width="150"><strong>项目ID</strong></td>
+                            <td><code>${currentProject.id}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>项目名称</strong></td>
+                            <td>${currentProject.name}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>创建时间</strong></td>
+                            <td>${formatDate(currentProject.created_at)}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>当前状态</strong></td>
+                            <td>${getStatusBadge(currentProject.status)}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+    
+    function renderStep1DataUpload() {
+        const hasData = currentProject.data?.has_data;
+        const hasCode = currentProject.code?.has_code;
+        
+        let html = `
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-cloud-upload me-2"></i>数据上传
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (hasData || hasCode) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    文件已上传
+                </div>
+                <div class="row">
+            `;
+            
+            if (hasData) {
+                const dataInfo = currentProject.data?.data_info || {};
+                html += `
+                    <div class="col-md-6">
+                        <div class="card" style="background: #f7fafc;">
+                            <div class="card-body">
+                                <h6><i class="bi bi-file-earmark-bar-graph text-primary me-2"></i>数据集</h6>
+                                <table class="table table-sm mt-3">
+                                    <tr>
+                                        <td><strong>文件名</strong></td>
+                                        <td>${currentProject.data.data_filename}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>样本数</strong></td>
+                                        <td>${dataInfo.rows || '-'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>特征数</strong></td>
+                                        <td>${dataInfo.columns || '-'}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (hasCode) {
+                html += `
+                    <div class="col-md-6">
+                        <div class="card" style="background: #f7fafc;">
+                            <div class="card-body">
+                                <h6><i class="bi bi-code-square text-success me-2"></i>代码文件</h6>
+                                <table class="table table-sm mt-3">
+                                    <tr>
+                                        <td><strong>文件名</strong></td>
+                                        <td>${currentProject.code.code_filename}</td>
+                                    </tr>
+                                </table>
+                                <div class="alert alert-warning mt-3 small mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    若仅上传代码，系统将尝试获取同名经典数据集或生成模拟数据
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+        } else {
+            html += `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    尚未上传任何文件
+                </div>
+                <p class="text-muted">请返回项目列表编辑项目并上传数据或代码文件。</p>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function renderStep2ScenarioDetection() {
+        const scenario = currentProject.scenario;
+        
+        let html = `
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-search me-2"></i>场景识别
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (scenario?.detected) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    业务场景已识别
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">贷款阶段</h6>
+                                <div class="scenario-badge scenario-${scenario.loan_phase}" style="font-size: 1rem;">
+                                    ${scenario.loan_phase_name}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">子场景</h6>
+                                <div class="h5 mb-0">${scenario.sub_scenario_name}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">置信度</h6>
+                                <div class="h5 mb-0">${(scenario.confidence * 100).toFixed(1)}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (scenario.evidence && scenario.evidence.length > 0) {
+                html += `
+                    <h6 class="mb-3">识别依据</h6>
+                    <ul class="list-group">
+                `;
+                scenario.evidence.forEach(ev => {
+                    html += `<li class="list-group-item"><i class="bi bi-check-circle text-success me-2"></i>${ev}</li>`;
+                });
+                html += `</ul>`;
+            }
+        } else {
+            html += `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    尚未识别业务场景
+                </div>
+                <p class="text-muted">场景识别将在上传数据后自动进行，您也可以手动设置场景。</p>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function renderStep3DataPreparation() {
+        const dataPrep = currentProject.data_preparation;
+        
+        let html = `
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-gear me-2"></i>数据准备</span>
+                    ${!dataPrep?.success ? `
+                        <button class="btn btn-primary btn-sm" onclick="runStep('data-preparation')">
+                            <i class="bi bi-play-circle me-1"></i>执行数据准备
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (dataPrep) {
+            if (dataPrep.success) {
+                html += `
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        数据准备完成 (${formatDate(dataPrep.timestamp)})
+                    </div>
+                `;
+                
+                if (dataPrep.steps) {
+                    html += `<h6 class="mb-3">执行步骤</h6>`;
+                    dataPrep.steps.forEach(step => {
+                        html += `
+                            <div class="card mb-2" style="background: #f7fafc;">
+                                <div class="card-body py-3">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <strong>步骤 ${step.step}: ${step.name}</strong>
+                                            <p class="text-muted small mb-0 mt-1">${step.description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (dataPrep.summary) {
+                    html += `
+                        <h6 class="mb-3 mt-4">处理摘要</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>原始特征数</td>
+                                <td>${dataPrep.summary.original_features || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td>处理后特征数</td>
+                                <td>${dataPrep.summary.processed_features || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td>样本数</td>
+                                <td>${dataPrep.summary.rows || '-'}</td>
+                            </tr>
+                        </table>
+                    `;
+                }
+            } else {
+                html += `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle me-2"></i>
+                        数据准备失败
+                    </div>
+                `;
+                if (dataPrep.errors) {
+                    dataPrep.errors.forEach(err => {
+                        html += `<p class="text-danger"><code>${err}</code></p>`;
+                    });
+                }
+            }
+        } else {
+            html += `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    数据准备尚未执行
+                </div>
+                <p class="text-muted mb-4">数据准备包含以下步骤：</p>
+                <ol class="text-muted">
+                    <li>数据加载与基本信息统计</li>
+                    <li>缺失值分析与处理</li>
+                    <li>异常值检测</li>
+                    <li>数据类型转换</li>
+                </ol>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function renderStep4FeatureEngineering() {
+        const fe = currentProject.feature_engineering;
+        
+        let html = `
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-wrench me-2"></i>特征工程</span>
+                    ${!fe?.success ? `
+                        <button class="btn btn-primary btn-sm" onclick="runStep('feature-engineering')">
+                            <i class="bi bi-play-circle me-1"></i>执行特征工程
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (fe && fe.success) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    特征工程完成
+                </div>
+            `;
+            
+            if (fe.steps) {
+                html += `<h6 class="mb-3">执行步骤</h6>`;
+                fe.steps.forEach(step => {
+                    html += `
+                        <div class="card mb-2" style="background: #f7fafc;">
+                            <div class="card-body py-3">
+                                <strong>步骤 ${step.step}: ${step.name}</strong>
+                                <p class="text-muted small mb-0 mt-1">${step.description}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        } else if (fe && !fe.success) {
+            html += `
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle me-2"></i>
+                    特征工程执行失败
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    特征工程尚未执行
+                </div>
+                
+                <h6 class="mb-3">特征工程配置</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">缺失值处理方法</label>
+                        <select class="form-select" id="fe-missing-method">
+                            <option value="auto">自动选择</option>
+                            <option value="mean">均值填充</option>
+                            <option value="median">中位数填充</option>
+                            <option value="mode">众数填充</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">编码方法</label>
+                        <select class="form-select" id="fe-encoding-method">
+                            <option value="onehot">独热编码 (One-Hot)</option>
+                            <option value="label">标签编码 (Label)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">特征缩放</label>
+                        <select class="form-select" id="fe-scaling-method">
+                            <option value="standard">标准化</option>
+                            <option value="minmax">Min-Max归一化</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">特征选择方法</label>
+                        <select class="form-select" id="fe-selection-method">
+                            <option value="auto">自动选择</option>
+                            <option value="variance">方差阈值</option>
+                            <option value="correlation">相关性分析</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function renderStep5ModelTraining() {
+        const mt = currentProject.model_training;
+        
+        let html = `
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-cpu me-2"></i>模型训练</span>
+                    ${!mt?.success ? `
+                        <button class="btn btn-primary btn-sm" onclick="runStep('model-training')">
+                            <i class="bi bi-play-circle me-1"></i>开始训练
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (mt && mt.success) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    模型训练完成
+                </div>
+                
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>模型类型</strong></td>
+                        <td>${mt.model_type || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>目标变量</strong></td>
+                        <td><code>${mt.target_column || 'default'}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>训练样本数</strong></td>
+                        <td>${mt.train_samples || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>测试样本数</strong></td>
+                        <td>${mt.test_samples || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>特征数</strong></td>
+                        <td>${mt.feature_count || '-'}</td>
+                    </tr>
+                </table>
+            `;
+        } else {
+            html += `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    模型尚未训练
+                </div>
+                
+                <h6 class="mb-3">模型配置</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">模型类型</label>
+                        <select class="form-select" id="model-type">
+                            <option value="LogisticRegression">逻辑回归 (Logistic Regression)</option>
+                            <option value="RandomForest">随机森林 (Random Forest)</option>
+                            <option value="XGBoost">XGBoost</option>
+                            <option value="LightGBM">LightGBM</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">目标变量列名</label>
+                        <input type="text" class="form-control" id="target-column" value="default" placeholder="例如: default, label, target">
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-4 small">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>提示：</strong>系统支持的风控模型包括逻辑回归、随机森林、XGBoost、LightGBM等。
+                    逻辑回归适合可解释性要求高的场景，XGBoost/LightGBM适合追求预测精度的场景。
+                </div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function renderStep6ModelEvaluation() {
+        const me = currentProject.model_evaluation;
+        
+        let html = `
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-bar-chart-line me-2"></i>模型评估</span>
+                    ${!me?.success && currentProject.model_training?.success ? `
+                        <button class="btn btn-primary btn-sm" onclick="runStep('model-evaluation')">
+                            <i class="bi bi-play-circle me-1"></i>执行评估
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (me && me.success) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    模型评估完成
+                </div>
+                
+                ${renderModelResults()}
+            `;
+        } else if (!currentProject.model_training?.success) {
+            html += `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    请先完成模型训练
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    模型评估尚未执行
+                </div>
+                
+                <p class="text-muted">模型评估将计算以下风控常用指标：</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="text-muted">
+                            <li><strong>AUC-ROC</strong> - 曲线下面积，衡量整体区分能力</li>
+                            <li><strong>KS统计量</strong> - 衡量正负样本的区分度</li>
+                            <li><strong>Gini系数</strong> - 2*AUC - 1</li>
+                            <li><strong>PSI</strong> - 群体稳定性指数</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="text-muted">
+                            <li><strong>准确率/精确率/召回率/F1</strong></li>
+                            <li><strong>混淆矩阵</strong></li>
+                            <li><strong>特征重要性分析</strong></li>
+                            <li><strong>交叉验证</strong></li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function renderStep7ModelDeployment() {
+        const md = currentProject.model_deployment;
+        const isCompleted = currentProject.status === 'completed';
+        
+        let html = `
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-rocket-takeoff me-2"></i>模型部署与监控</span>
+                    ${!md?.success && currentProject.model_evaluation?.success ? `
+                        <button class="btn btn-primary btn-sm" onclick="runStep('model-deployment')">
+                            <i class="bi bi-check-circle me-1"></i>完成项目
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (isCompleted) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <strong>项目已完成！</strong>
+                </div>
+                
+                <div class="card bg-success text-white mb-4">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-trophy" style="font-size: 3rem;"></i>
+                        <h4 class="mt-3 mb-0">恭喜！您的风控建模项目已完成</h4>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card" style="background: #f7fafc;">
+                            <div class="card-body">
+                                <h6><i class="bi bi-file-earmark-text text-primary me-2"></i>生成的文档</h6>
+                                <p class="text-muted small mt-2 mb-0">
+                                    ${(currentProject.documents || []).length} 个过程文档已生成
+                                </p>
+                                <a href="#" class="btn btn-sm btn-outline-primary mt-3" onclick="document.querySelector('[data-bs-target=\"#tab-documents\"]').click()">
+                                    查看文档
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card" style="background: #f7fafc;">
+                            <div class="card-body">
+                                <h6><i class="bi bi-download text-success me-2"></i>导出项目</h6>
+                                <p class="text-muted small mt-2 mb-0">
+                                    导出模型文件、处理后数据和完整文档
+                                </p>
+                                <button class="btn btn-sm btn-outline-success mt-3" onclick="exportProject()">
+                                    导出项目
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (md && md.success) {
+            html += `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    模型部署完成
+                </div>
+            `;
+        } else if (!currentProject.model_evaluation?.success) {
+            html += `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    请先完成模型评估
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    点击"完成项目"按钮结束本次建模流程
+                </div>
+                
+                <h6 class="mb-3">部署说明</h6>
+                <ol class="text-muted">
+                    <li>模型将以pickle/joblib格式保存</li>
+                    <li>生成最终项目报告</li>
+                    <li>汇总所有过程文档</li>
+                    <li>标记项目为已完成状态</li>
+                </ol>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    function renderDefaultStep(step) {
+        return `
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-info-circle text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3">${step.name}</h5>
+                    <p class="text-muted mt-2">状态: ${step.status}</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    async function runStep(stepName) {
+        let endpoint = '';
+        let body = {};
+        
+        switch(stepName) {
+            case 'data-preparation':
+                endpoint = '/data-preparation';
+                break;
+            case 'feature-engineering':
+                endpoint = '/feature-engineering';
+                body = {
+                    config: {
+                        missing_method: document.getElementById('fe-missing-method')?.value || 'auto',
+                        encoding_method: document.getElementById('fe-encoding-method')?.value || 'onehot',
+                        scaling_method: document.getElementById('fe-scaling-method')?.value || 'standard',
+                        selection_method: document.getElementById('fe-selection-method')?.value || 'auto'
+                    }
+                };
+                break;
+            case 'model-training':
+                endpoint = '/model-training';
+                body = {
+                    model_type: document.getElementById('model-type')?.value || 'LogisticRegression',
+                    target_column: document.getElementById('target-column')?.value || 'default'
+                };
+                break;
+            case 'model-evaluation':
+                endpoint = '/model-evaluation';
+                break;
+            case 'model-deployment':
+                endpoint = '/model-deployment';
+                break;
+            default:
+                return;
+        }
+        
+        try {
+            showToast('正在执行，请稍候...', 'warning');
+            
+            const response = await apiRequest(`/projects/${projectId}${endpoint}`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+            
+            if (response.success) {
+                showToast('执行成功！', 'success');
+                await loadProject();
+                
+                setTimeout(() => {
+                    selectStep(currentProject.current_step);
+                }, 500);
+            } else {
+                showToast(response.error || '执行失败', 'error');
+            }
+        } catch (error) {
+            showToast('执行失败: ' + error.message, 'error');
+            console.error(error);
+        }
+    }
+    
+    function showDocument(docId) {
+        const docs = currentProject.documents || [];
+        const doc = docs.find(d => d.id === docId);
+        
+        if (!doc) return;
+        
+        document.getElementById('doc-modal-title').textContent = doc.name;
+        
+        let content = `<div class="small"><p class="text-muted">生成时间: ${formatDate(doc.timestamp)}</p></div>`;
+        
+        if (doc.content) {
+            if (typeof doc.content === 'object') {
+                content += `<pre class="code-block">${JSON.stringify(doc.content, null, 2)}</pre>`;
+            } else {
+                content += `<div class="mt-3">${doc.content}</div>`;
+            }
+        }
+        
+        if (doc.steps && doc.steps.length > 0) {
+            content += `<h6 class="mt-4 mb-3">执行步骤</h6>`;
+            doc.steps.forEach(step => {
+                content += `
+                    <div class="card mb-2" style="background: #f7fafc;">
+                        <div class="card-body py-2">
+                            <strong>步骤 ${step.step}: ${step.name}</strong>
+                            <p class="text-muted small mb-0">${step.description || ''}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        if (doc.metrics) {
+            content += `<h6 class="mt-4 mb-3">评估指标</h6>`;
+            content += `<div class="row">`;
+            Object.entries(doc.metrics).forEach(([key, value]) => {
+                if (typeof value === 'number') {
+                    content += `
+                        <div class="col-md-3 mb-2">
+                            <div class="metric-card">
+                                <div class="metric-value">${value.toFixed(4)}</div>
+                                <div class="metric-label">${key.toUpperCase()}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            content += `</div>`;
+        }
+        
+        document.getElementById('doc-modal-content').innerHTML = content;
+        
+        const modal = new bootstrap.Modal(document.getElementById('document-modal'));
+        modal.show();
+    }
+    
+    async function refreshProject() {
+        await loadProject();
+        showToast('已刷新', 'success');
+    }
+    
+    function exportProject() {
+        showToast('导出功能开发中...', 'warning');
+    }
+    
+    function getStatusBadge(status) {
+        const badges = {
+            'created': '<span class="badge bg-secondary">已创建</span>',
+            'completed': '<span class="badge bg-success">已完成</span>',
+            'error': '<span class="badge bg-danger">出错</span>'
+        };
+        return badges[status] || '<span class="badge bg-warning">进行中</span>';
+    }
+</script>
+{% endblock %}

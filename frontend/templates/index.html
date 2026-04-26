@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}风控策略/建模/算法工程师工作系统{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-speedometer2 me-2 text-primary"></i>
+            风控建模工作台
+        </h2>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-value" id="total-projects">0</div>
+                        <div class="stat-label">总项目数</div>
+                    </div>
+                    <i class="bi bi-folder2-open" style="font-size: 2.5rem; opacity: 0.8;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background: linear-gradient(135deg, #38a169 0%, #48bb78 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-value" id="completed-projects">0</div>
+                        <div class="stat-label">已完成项目</div>
+                    </div>
+                    <i class="bi bi-check-circle" style="font-size: 2.5rem; opacity: 0.8;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background: linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-value" id="in-progress-projects">0</div>
+                        <div class="stat-label">进行中项目</div>
+                    </div>
+                    <i class="bi bi-hourglass-split" style="font-size: 2.5rem; opacity: 0.8;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background: linear-gradient(135deg, #805ad5 0%, #9f7aea 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-value" id="avg-auc">-</div>
+                        <div class="stat-label">平均模型AUC</div>
+                    </div>
+                    <i class="bi bi-graph-up" style="font-size: 2.5rem; opacity: 0.8;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>快速开始</span>
+                <a href="/create-project" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>新建项目
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card" style="background: #f7fafc; cursor: pointer;" onclick="window.location.href='/create-project'">
+                            <div class="card-body text-center p-4">
+                                <i class="bi bi-file-earmark-arrow-up text-primary" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                                <h5>上传数据</h5>
+                                <p class="text-muted small">上传您的数据集，开始风控建模全流程</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card" style="background: #f7fafc; cursor: pointer;" onclick="window.location.href='/create-project'">
+                            <div class="card-body text-center p-4">
+                                <i class="bi bi-code-slash text-success" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                                <h5>上传代码</h5>
+                                <p class="text-muted small">仅上传代码，系统将生成模拟数据进行开发</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-container">
+                    <h6 class="mb-3">风控建模完整流程</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-muted">8个核心步骤</small>
+                    </div>
+                    <div class="progress mb-3">
+                        <div class="progress-bar" style="width: 0%;" id="workflow-progress"></div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col">
+                            <small class="text-muted">数据准备</small>
+                        </div>
+                        <div class="col">
+                            <small class="text-muted">特征工程</small>
+                        </div>
+                        <div class="col">
+                            <small class="text-muted">模型训练</small>
+                        </div>
+                        <div class="col">
+                            <small class="text-muted">评估部署</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                最近项目
+            </div>
+            <div class="card-body" id="recent-projects">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">暂无项目</p>
+                    <a href="/create-project" class="btn btn-primary btn-sm">创建第一个项目</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                工作流程概览
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <div class="workflow-step pending">
+                            <div class="d-flex align-items-center">
+                                <div class="step-number pending">1</div>
+                                <div>
+                                    <h6 class="mb-0">数据准备</h6>
+                                    <small class="text-muted">数据上传、清洗、探索性分析</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div class="workflow-step pending">
+                            <div class="d-flex align-items-center">
+                                <div class="step-number pending">2</div>
+                                <div>
+                                    <h6 class="mb-0">特征工程</h6>
+                                    <small class="text-muted">特征编码、缩放、选择、构建</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div class="workflow-step pending">
+                            <div class="d-flex align-items-center">
+                                <div class="step-number pending">3</div>
+                                <div>
+                                    <h6 class="mb-0">模型训练</h6>
+                                    <small class="text-muted">逻辑回归、XGBoost、LightGBM等</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div class="workflow-step pending">
+                            <div class="d-flex align-items-center">
+                                <div class="step-number pending">4</div>
+                                <div>
+                                    <h6 class="mb-0">模型评估</h6>
+                                    <small class="text-muted">AUC、KS、PSI等风控指标</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadDashboardData();
+    });
+    
+    async function loadDashboardData() {
+        try {
+            const response = await apiRequest('/projects');
+            if (response.success) {
+                const projects = response.data || [];
+                
+                document.getElementById('total-projects').textContent = projects.length;
+                
+                const completed = projects.filter(p => p.status === 'completed').length;
+                document.getElementById('completed-projects').textContent = completed;
+                
+                const inProgress = projects.filter(p => p.status !== 'completed').length;
+                document.getElementById('in-progress-projects').textContent = inProgress;
+                
+                if (projects.length > 0) {
+                    renderRecentProjects(projects);
+                }
+            }
+        } catch (error) {
+            console.error('加载统计数据失败:', error);
+        }
+    }
+    
+    function renderRecentProjects(projects) {
+        const container = document.getElementById('recent-projects');
+        
+        if (projects.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">暂无项目</p>
+                    <a href="/create-project" class="btn btn-primary btn-sm">创建第一个项目</a>
+                </div>
+            `;
+            return;
+        }
+        
+        const recent = projects.slice(0, 5);
+        
+        let html = '';
+        recent.forEach(project => {
+            const statusBadge = getStatusBadge(project.status);
+            const scenarioBadge = project.scenario?.detected ? 
+                `<span class="scenario-badge scenario-${project.scenario.loan_phase}">
+                    ${project.scenario.loan_phase_name || ''}
+                </span>` : '';
+            
+            html += `
+                <div class="document-item cursor-pointer" onclick="window.location.href='/project/${project.id}'">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${project.name}</h6>
+                            <small class="text-muted">创建于: ${formatDate(project.created_at)}</small>
+                            <div class="mt-2">
+                                ${statusBadge}
+                                ${scenarioBadge}
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    function getStatusBadge(status) {
+        const badges = {
+            'created': '<span class="badge bg-secondary">已创建</span>',
+            'completed': '<span class="badge bg-success">已完成</span>',
+            'error': '<span class="badge bg-danger">出错</span>'
+        };
+        return badges[status] || '<span class="badge bg-warning">进行中</span>';
+    }
+</script>
+{% endblock %}
