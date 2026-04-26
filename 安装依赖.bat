@@ -36,40 +36,17 @@ echo.
 echo 核心依赖包括: numpy, pandas, flask, scikit-learn, matplotlib, seaborn 等
 echo.
 
-set "MIRROR1=-i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
-set "MIRROR2=-i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com"
-set "MIRROR3=-i https://pypi.mirrors.ustc.edu.cn/simple/ --trusted-host pypi.mirrors.ustc.edu.cn"
-set "MIRROR4="
-
 set "FAILED_PACKAGES="
 
 set "CORE_LIST=numpy pandas flask flask-cors scikit-learn joblib matplotlib seaborn openpyxl xlrd scipy"
 
 for %%p in (%CORE_LIST%) do (
     echo [安装] %%p
-    pip install %%p %MIRROR1% >nul 2>&1
+    pip install %%p
     python -c "import %%p" >nul 2>&1
     if %errorlevel% neq 0 (
-        pip install %%p %MIRROR2% >nul 2>&1
-        python -c "import %%p" >nul 2>&1
-        if %errorlevel% neq 0 (
-            pip install %%p %MIRROR3% >nul 2>&1
-            python -c "import %%p" >nul 2>&1
-            if %errorlevel% neq 0 (
-                pip install %%p >nul 2>&1
-                python -c "import %%p" >nul 2>&1
-                if %errorlevel% neq 0 (
-                    echo         [失败] %%p 安装失败，将跳过
-                    set "FAILED_PACKAGES=%%p %FAILED_PACKAGES%"
-                ) else (
-                    echo         [成功] %%p
-                )
-            ) else (
-                echo         [成功] %%p
-            )
-        ) else (
-            echo         [成功] %%p
-        )
+        echo         [失败] %%p 安装失败
+        set "FAILED_PACKAGES=%%p %FAILED_PACKAGES%"
     ) else (
         echo         [成功] %%p
     )
@@ -85,17 +62,11 @@ echo.
 set "OPTIONAL_LIST=xgboost lightgbm pyarrow"
 
 for %%p in (%OPTIONAL_LIST%) do (
-    echo [安装] %%p ^(可选^)
-    pip install %%p %MIRROR1% >nul 2>&1
+    echo [安装] %%p (可选)
+    pip install %%p
     python -c "import %%p" >nul 2>&1
     if %errorlevel% neq 0 (
-        pip install %%p >nul 2>&1
-        python -c "import %%p" >nul 2>&1
-        if %errorlevel% neq 0 (
-            echo         [跳过] %%p 安装失败，系统将使用替代方案
-        ) else (
-            echo         [成功] %%p
-        )
+        echo         [跳过] %%p 安装失败，系统将使用替代方案
     ) else (
         echo         [成功] %%p
     )

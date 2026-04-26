@@ -52,66 +52,34 @@ for %%p in (%CORE_PACKAGES%) do (
 
 if %MISSING_CORE% == 1 (
     echo.
-    echo [警告] 缺少核心依赖包，正在安装...
+    echo [警告] 缺少核心依赖包，请先运行 "安装依赖.bat"
     echo.
-    
-    echo [尝试] 使用清华镜像源安装...
-    pip install numpy pandas flask flask-cors scikit-learn joblib matplotlib seaborn openpyxl scipy -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
-    
-    if %errorlevel% neq 0 (
-        echo.
-        echo [尝试] 使用阿里镜像源安装...
-        pip install numpy pandas flask flask-cors scikit-learn joblib matplotlib seaborn openpyxl scipy -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
-        
-        if %errorlevel% neq 0 (
-            echo.
-            echo [尝试] 使用官方源安装...
-            pip install numpy pandas flask flask-cors scikit-learn joblib matplotlib seaborn openpyxl scipy
-            
-            if %errorlevel% neq 0 (
-                echo.
-                echo [警告] 部分依赖安装可能失败，继续检查...
-            )
-        )
-    )
+    echo 或者手动执行以下命令:
+    echo   pip install numpy pandas flask flask-cors scikit-learn joblib
+    echo   pip install matplotlib seaborn openpyxl xlrd scipy
     echo.
-    echo [重新检查] 核心依赖状态:
-    for %%p in (%CORE_PACKAGES%) do (
-        python -c "import %%p" >nul 2>&1
-        if %errorlevel% neq 0 (
-            echo [失败] %%p
-        ) else (
-            echo [成功] %%p
-        )
-    )
+    pause
+    exit /b 1
 ) else (
     echo.
     echo [OK] 所有核心依赖已安装
 )
 echo.
 
-echo [步骤 4/5] 检查可选依赖（xgboost, lightgbm, pyarrow）
+echo [步骤 4/5] 检查可选依赖
 set "OPTIONAL_PACKAGES=xgboost lightgbm pyarrow"
 
 for %%p in (%OPTIONAL_PACKAGES%) do (
     python -c "import %%p" >nul 2>&1
     if %errorlevel% neq 0 (
-        echo [缺失] %%p ^(可选^)
-        echo         正在尝试安装...
-        pip install %%p -i https://pypi.tuna.tsinghua.edu.cn/simple >nul 2>&1
-        python -c "import %%p" >nul 2>&1
-        if %errorlevel% neq 0 (
-            echo         [跳过] %%p 安装失败，系统将使用替代方案
-        ) else (
-            echo         [成功] %%p 已安装
-        )
+        echo [未安装] %%p (可选，不影响系统运行)
     ) else (
         echo [已安装] %%p
     )
 )
 echo.
 
-echo [步骤 5/5] 验证系统启动
+echo [步骤 5/5] 启动系统
 echo.
 echo ============================================================
 echo   系统准备就绪！
